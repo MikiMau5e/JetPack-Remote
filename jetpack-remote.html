@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2E3729">
+<title>Jetpack Remote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #DCD6C1;
+    --panel: #ECE7D6;
+    --edge: #A9A28A;
+    --ink: #2E3729;
+    --muted: #5E6653;
+    --olive: #4F5D3F;
+    --amber: #C98A12;
+    --red: #B5402B;
+    --blue: #2F6CA8;
+    --green: #4E8A3A;
+    --glow: rgba(201, 138, 18, 0.45);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #1F251C;
+      --panel: #2E3729;
+      --edge: #4A5642;
+      --ink: #E8E1C8;
+      --muted: #A9AD96;
+      --olive: #93A37A;
+      --amber: #E6A92B;
+      --red: #E06A52;
+      --blue: #6FA6DB;
+      --green: #7DBA63;
+      --glow: rgba(230, 169, 43, 0.5);
+    }
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.45;
+    min-height: 100vh;
+  }
+  main {
+    max-width: 26rem;
+    margin: 0 auto;
+    padding: 1.25rem 1.1rem 2rem;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-family: "Saira Stencil One", "Impact", sans-serif;
+    font-weight: 400;
+    font-size: 2.1rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+  .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .lamp {
+    width: 0.65rem; height: 0.65rem; border-radius: 50%;
+    background: var(--edge);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+  }
+  .link.on .lamp { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .link.busy .lamp { background: var(--amber); }
+
+  .panel {
+    background: var(--panel);
+    border: 2px solid var(--edge);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  /* rivets */
+  .panel::before, .panel::after {
+    content: "";
+    position: absolute;
+    top: 0.55rem;
+    width: 0.4rem; height: 0.4rem;
+    border-radius: 50%;
+    background: var(--edge);
+  }
+  .panel::before { left: 0.55rem; }
+  .panel::after { right: 0.55rem; }
+
+  h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.9rem;
+  }
+
+  /* The power switch: the one bold element */
+  .power-wrap { display: grid; justify-items: center; gap: 0.75rem; padding: 0.5rem 0 0.25rem; }
+  #power {
+    width: 11rem; height: 11rem;
+    border-radius: 50%;
+    border: 6px solid var(--edge);
+    background: var(--bg);
+    color: var(--muted);
+    font: inherit;
+    font-family: "Saira Stencil One", "Impact", sans-serif;
+    font-size: 2rem;
+    cursor: pointer;
+    transition: background-color 160ms, color 160ms, border-color 160ms, box-shadow 200ms;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #power:active { transform: scale(0.97); }
+  #power[aria-pressed="true"] {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #2B2414;
+    box-shadow: 0 0 0 8px var(--glow), 0 0 36px var(--glow);
+  }
+  #power:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+  .power-note { margin: 0; color: var(--muted); font-size: 0.95rem; text-align: center; }
+
+  /* Battery gauge */
+  .gauge {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    height: 2.2rem;
+    padding: 4px;
+    border: 2px solid var(--edge);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+  }
+  .seg { border-radius: 2px; background: var(--edge); opacity: 0.35; }
+  .seg.lit { opacity: 1; background: var(--green); }
+  .gauge.low .seg.lit { background: var(--red); }
+  .gauge.mid .seg.lit { background: var(--amber); }
+  .batt-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  #battText { font-size: 1.35rem; font-weight: 600; }
+  #battVolts { color: var(--muted); }
+
+  button.secondary {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    min-height: 3rem;
+    margin-top: 0.9rem;
+    border-radius: 10px;
+    border: 2px solid var(--olive);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.primary {
+    font: inherit;
+    font-weight: 600;
+    width: 100%;
+    min-height: 3.25rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--olive);
+    color: var(--panel);
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+
+  #message {
+    min-height: 1.5rem;
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  #message.error { color: var(--red); }
+
+  details { color: var(--muted); font-size: 0.95rem; }
+  summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 2.5rem; display: flex; align-items: center; }
+  details p { margin: 0.25rem 0 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Jetpack</h1>
+    <span class="link" id="link"><span class="lamp"></span><span id="linkText">Not connected</span></span>
+  </header>
+
+  <section class="panel" id="connectPanel">
+    <button class="primary" id="connectBtn">Connect to jetpack</button>
+    <p id="message">Turn on the jetpack, then tap Connect.</p>
+  </section>
+
+  <section class="panel">
+    <div class="power-wrap">
+      <button id="power" aria-pressed="false" disabled>OFF</button>
+      <p class="power-note" id="powerNote">Connect first to use the lights.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Battery</h2>
+    <div class="gauge" id="gauge" aria-hidden="true"></div>
+    <div class="batt-row">
+      <span id="battText">Unknown</span>
+      <span id="battVolts"></span>
+    </div>
+    <button class="secondary" id="battBtn" disabled>Check battery</button>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Wireless code updates</summary>
+      <p>Puts the jetpack on WiFi for 10 minutes so you can upload new code from the Arduino IDE.</p>
+      <button class="secondary" id="otaBtn" disabled>Start update mode</button>
+    </details>
+  </section>
+</main>
+
+<script>
+  const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+  const CHAR_UUID    = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+  const DEVICE_NAME  = "BOBAJETPACK";
+
+  // Measured voltages (same scale as the board's code)
+  const EMPTY_V = 3.25;
+  const FULL_V  = 3.95;
+
+  let device = null;
+  let characteristic = null;
+  let lightsOn = false;
+  let battTimer = null;
+  let queue = Promise.resolve();
+
+  const $ = (id) => document.getElementById(id);
+  const connectBtn = $("connectBtn"), powerBtn = $("power"), battBtn = $("battBtn"), otaBtn = $("otaBtn");
+
+  // Build gauge segments
+  for (let i = 0; i < 10; i++) {
+    const s = document.createElement("div");
+    s.className = "seg";
+    $("gauge").appendChild(s);
+  }
+
+  function say(text, isError = false) {
+    $("message").textContent = text;
+    $("message").classList.toggle("error", isError);
+  }
+
+  function setLink(state) {
+    const link = $("link");
+    link.classList.toggle("on", state === "on");
+    link.classList.toggle("busy", state === "busy");
+    $("linkText").textContent =
+      state === "on" ? "Connected" : state === "busy" ? "Connecting" : "Not connected";
+    const ready = state === "on";
+    powerBtn.disabled = !ready;
+    battBtn.disabled = !ready;
+    otaBtn.disabled = !ready;
+    connectBtn.textContent = ready ? "Disconnect" : (device ? "Reconnect" : "Connect to jetpack");
+    $("powerNote").textContent = ready
+      ? (lightsOn ? "Lights are running. Tap to turn off." : "Tap to start the lights.")
+      : "Connect first to use the lights.";
+  }
+
+  // One Bluetooth operation at a time
+  function run(task) {
+    queue = queue.then(task, task);
+    return queue;
+  }
+
+  function send(cmd) {
+    return run(() => characteristic.writeValueWithResponse(new TextEncoder().encode(cmd)));
+  }
+
+  async function connect() {
+    if (!navigator.bluetooth) {
+      say("This browser can't use Bluetooth. Open this page in Chrome on Android.", true);
+      return;
+    }
+    try {
+      setLink("busy");
+      if (!device) {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: DEVICE_NAME }],
+          optionalServices: [SERVICE_UUID]
+        });
+        device.addEventListener("gattserverdisconnected", onDisconnected);
+      }
+      say("Connecting...");
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(SERVICE_UUID);
+      characteristic = await service.getCharacteristic(CHAR_UUID);
+      setLink("on");
+      say("Connected.");
+      checkBattery();
+      clearInterval(battTimer);
+      battTimer = setInterval(checkBattery, 60000);
+    } catch (err) {
+      setLink("off");
+      if (err.name === "NotFoundError") {
+        say("No jetpack picked. Make sure it's switched on and nearby, then try again.", true);
+      } else {
+        say("Couldn't connect: " + err.message + ". Turn Bluetooth and Location on, then try again.", true);
+      }
+    }
+  }
+
+  function onDisconnected() {
+    characteristic = null;
+    clearInterval(battTimer);
+    setLink("off");
+    say("Jetpack disconnected. Tap Reconnect.");
+  }
+
+  connectBtn.addEventListener("click", () => {
+    if (device && device.gatt.connected) {
+      device.gatt.disconnect();
+    } else {
+      connect();
+    }
+  });
+
+  powerBtn.addEventListener("click", async () => {
+    const next = !lightsOn;
+    try {
+      await send(next ? "1" : "0");
+      lightsOn = next;
+      powerBtn.setAttribute("aria-pressed", String(lightsOn));
+      powerBtn.textContent = lightsOn ? "ON" : "OFF";
+      setLink("on");
+    } catch (err) {
+      say("Couldn't reach the jetpack: " + err.message, true);
+    }
+  });
+
+  async function checkBattery() {
+    if (!characteristic) return;
+    try {
+      battBtn.disabled = true;
+      await send("3");
+      await new Promise((r) => setTimeout(r, 400));   // give the board time to measure
+      const value = await run(() => characteristic.readValue());
+      showBattery(new TextDecoder().decode(value));
+    } catch (err) {
+      say("Couldn't read the battery: " + err.message, true);
+    } finally {
+      battBtn.disabled = !characteristic;
+    }
+  }
+
+  function showBattery(text) {
+    // Expected format from the board: "3.82 V - Good"
+    const match = text.match(/([\d.]+)\s*V\s*-\s*(.+)/);
+    if (!match) {
+      $("battText").textContent = "No reading yet";
+      $("battVolts").textContent = "";
+      return;
+    }
+    const volts = parseFloat(match[1]);
+    const label = match[2].trim();
+    const usb = label.toLowerCase().includes("usb");
+    let pct = usb ? 100 : Math.round(((volts - EMPTY_V) / (FULL_V - EMPTY_V)) * 100);
+    pct = Math.max(0, Math.min(100, pct));
+    const lit = Math.round(pct / 10);
+
+    $("battText").textContent = usb ? "Charging" : label;
+    $("battVolts").textContent = volts.toFixed(2) + " V";
+    const gauge = $("gauge");
+    gauge.classList.toggle("low", !usb && pct <= 20);
+    gauge.classList.toggle("mid", !usb && pct > 20 && pct <= 50);
+    [...gauge.children].forEach((seg, i) => seg.classList.toggle("lit", i < lit));
+  }
+
+  battBtn.addEventListener("click", checkBattery);
+
+  otaBtn.addEventListener("click", async () => {
+    try {
+      await send("2");
+      say("Update mode started. In Arduino, pick the bobajetpack network port within 10 minutes.");
+    } catch (err) {
+      say("Couldn't start update mode: " + err.message, true);
+    }
+  });
+
+  if (!navigator.bluetooth) {
+    say("This browser can't use Bluetooth. Open this page in Chrome on Android.", true);
+    connectBtn.disabled = true;
+  }
+</script>
+</body>
+</html>
